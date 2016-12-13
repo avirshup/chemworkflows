@@ -1,0 +1,2 @@
+pyccc >= 0.6.6
+pyyaml
