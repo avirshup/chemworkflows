@@ -39,3 +39,6 @@ def read_molecule(description):
     m.write('out.pdb')
 
 
+#def write(fmt):
+#   import moldesign as mdt
+#    mol = mdt.read('in.pkl')

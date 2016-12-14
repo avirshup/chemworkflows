@@ -1,0 +1,71 @@
+from __future__ import print_function
+import sys
+import pyccc
+import config
+
+
+def run_mdt(fn, *args, **kwargs):
+    """ Runs a python command in an MDT container
+    """
+    pflush('Running python:%s ...' % fn.__name__, end='')
+    wait = kwargs.pop('wait', True)
+    inputs = kwargs.pop('inputs', {})
+
+    pycall = pyccc.PythonCall(fn, *args, **kwargs)
+    job = pyccc.PythonJob(config.ENGINE, config.MDTIMAGE,
+                          pycall,
+                          inputs=inputs)
+    pflush('id:%s ...' % job.jobid, end='')
+
+    if wait:
+        job.wait()
+        pflush('done', end='\n')
+    else:
+        pflush('submitted', end='\n')
+
+    return job
+
+
+def submit_job(job, image=None, wait=True):
+    """ Runs a job object. This is usually something created by MDT
+    that drives an external tool
+    """
+    pflush('Running job: %s ...' % job.name, end='')
+    job.engine = config.ENGINE
+    if image is not None: job.image = image
+
+    job.submit()
+    pflush('id:%s ...' % job.jobid, end='')
+
+    if wait:
+        job.wait()
+        pflush('done', end='\n')
+    else:
+        pflush('submitted', end='\n')
+
+    return job
+
+
+def pickle_trajectory(job):
+    r = job.result
+    r.write('traj.pkl')
+    r.mol.write('out.pkl')
+
+
+def pickle_mol(job):
+    r = job.result
+    r.mol.write('out.pkl')
+
+
+def finish_job_callback():
+    import moldesign as mdt
+
+    job_description = mdt.read('job.description.pkl')
+    finished_job = mdt.read('job.run.pkl')
+
+
+def pflush(s, **kwargs):
+    print(s, **kwargs)
+    sys.stdout.flush()
+
+
