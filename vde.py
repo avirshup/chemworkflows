@@ -1,11 +1,11 @@
 import json
 import sys
 
-import pyccc
 import yaml
 
 import common
-from utils import run_mdt, submit_job, pickle_trajectory, pickle_mol
+from utils import run_mdt, submit_job
+import config
 
 # what would make this easier? Make ALL nodes use compatible i/o formats
 # Then we don't need to translate before/after sending to NWChem
@@ -41,7 +41,8 @@ def main(inputjson):
     # the input files onto the master server - they're part of the job object
     # That's potentially bad, need to change it somehow
 
-    submit_job(doublet_job)
+    submit_job(doublet_job,
+               image=config.NWCHEMIMAGE)
     doublet_result = run_mdt(finish_doublet, doublet_job,
                              inputs={'in.pkl': make_doublet_job.get_output('out.pkl')})
 
@@ -50,7 +51,8 @@ def main(inputjson):
                                inputs={'in.pkl': doublet_result.get_output('out.pkl')})
     singlet_job = make_singlet_job.result
 
-    submit_job(singlet_job)
+    submit_job(singlet_job,
+               image=config.NWCHEMIMAGE)
     singlet_result = run_mdt(finish_singlet, singlet_job,
                              inputs={'in.pkl': make_singlet_job.get_output('out.pkl')})
 

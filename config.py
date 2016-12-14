@@ -1,5 +1,5 @@
 import pyccc
 
-ENGINE = pyccc.Docker('unix://var/run/docker.sock')
-MDTIMAGE = 'moldesign_complete'
-NWCHEMIMAGE = 'nwchem'
+ENGINE = pyccc.CloudComputeCannon('http://cloudcomputecannon.bionano.autodesk.com:9000')
+MDTIMAGE = 'docker.io/avirshup/mdtapptest'
+NWCHEMIMAGE = 'docker.io/avirshup/nwapptest'
