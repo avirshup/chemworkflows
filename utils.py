@@ -2,6 +2,7 @@ from __future__ import print_function
 import sys
 import pyccc
 import config
+import pickle
 
 
 def run_mdt(fn, *args, **kwargs):
@@ -15,6 +16,9 @@ def run_mdt(fn, *args, **kwargs):
     job = pyccc.PythonJob(config.ENGINE, config.MDTIMAGE,
                           pycall,
                           inputs=inputs)
+
+    with open('job%s.pkl' % job.jobid, 'w') as jobfile:
+        pickle.dump(job, jobfile)
     pflush('id:%s ...' % job.jobid, end='')
 
     if wait:
@@ -35,6 +39,10 @@ def submit_job(job, image=None, wait=True):
     if image is not None: job.image = image
 
     job.submit()
+
+    with open('job%s.pkl' % job.jobid, 'w') as jobfile:
+        pickle.dump(job, jobfile)
+
     pflush('id:%s ...' % job.jobid, end='')
 
     if wait:
