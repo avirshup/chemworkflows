@@ -37,6 +37,7 @@ def main(inputjson):
     make_doublet_job = run_mdt(prep_doublet_minimization,
                                inputs={'in.pkl': build_mol.get_output('out.pkl')})
     doublet_job = make_doublet_job.result
+    doublet_job._submitted = False  # pyccc version mismatch hack
     # note: retrieving the result here means we will probably be copying
     # the input files onto the master server - they're part of the job object
     # That's potentially bad, need to change it somehow
@@ -50,6 +51,7 @@ def main(inputjson):
     make_singlet_job = run_mdt(prep_singlet_energy,
                                inputs={'in.pkl': doublet_result.get_output('out.pkl')})
     singlet_job = make_singlet_job.result
+    singlet_job._submitted = False  # pyccc version mismatch hack
 
     submit_job(singlet_job,
                image=config.NWCHEMIMAGE)

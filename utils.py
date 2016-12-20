@@ -21,12 +21,27 @@ def run_mdt(fn, *args, **kwargs):
         pickle.dump(job, jobfile)
     pflush('id:%s ...' % job.jobid, end='')
 
+    return finish_job(job, wait)
+
+
+def finish_job(job, wait):
     if wait:
         job.wait()
         pflush('done', end='\n')
     else:
         pflush('submitted', end='\n')
-
+        return job
+    try:
+        s = job.stderr
+    except Exception:
+        print('Failed to get stderr...')
+    else:
+        print('STDERR:')
+        if s.strip():
+            print(s)
+        print("STDOUT:")
+        if job.stdout.strip():
+            print(job.stdout)
     return job
 
 
@@ -45,13 +60,8 @@ def submit_job(job, image=None, wait=True):
 
     pflush('id:%s ...' % job.jobid, end='')
 
-    if wait:
-        job.wait()
-        pflush('done', end='\n')
-    else:
-        pflush('submitted', end='\n')
+    return finish_job(job, wait)
 
-    return job
 
 
 def pickle_trajectory(job):
