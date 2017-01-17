@@ -1,0 +1,22 @@
+_SOURCES_:
+ - ~/mycode/molecular-design-toolkit/docker_images/DockerMake.yml
+
+mdt_subprocess:
+  requires:
+   - moldesign_complete
+  build: |
+   RUN mkdir -p ~/.moldesign \
+    && echo -e "engine_type: subprocess\n" > ~/.moldesign/moldesign.yml
+
+
+mdt_nwchem:
+  requires:
+    - mdt_subprocess
+    - nwchem
+
+
+mdt_ambertools:
+  requires:
+    - mdt_subprocess
+    - ambertools
+

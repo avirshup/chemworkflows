@@ -73,9 +73,11 @@ def prep_ligand(mol, ligand_atom_ids):
     import moldesign as mdt
 
     ligand = mdt.Molecule([mol.atoms[idx] for idx in ligand_atom_ids])
-    ligh = mdt.set_hybridization_and_ph(ligand, 7.4)
+    #ligh = mdt.set_hybridization_and_ph(ligand, 7.4)
+    ligh = ligand
     params = mdt.interfaces.ambertools.parameterize(ligh, charges='gasteiger')
-    return {'ligand_parameters': params}
+    return {'ligand_parameters': params,
+            'ligand': ligh}
 
 
 @app.task(mol=read_molecule['mol'],
@@ -94,7 +96,9 @@ def prep_forcefield(mol, ligand_atom_ids, ligand_params):
                              or atom.index in ligand_atom_ids])
     withff = mdt.interfaces.ambertools.assign_forcefield(stripmol, parameters=ligand_params)
 
-    return {'molecule': withff}
+    return {'molecule': withff,
+            'prmtop': withff.ff.amber_params.prmtop,
+            'inpcrd': withff.ff.amber_params.inpcrd}
 
 
 @app.task(mol=prep_forcefield['molecule'])
@@ -110,8 +114,19 @@ def mm_minimization(mol):
             'rmsd': traj.rmsd()[-1].to_json()}
 
 
+@app.task(traj=mm_minimization['trajectory'])
+def result_coordinates(traj):
+    m = traj.mol
+    return {'finalpdb': m.write('pdb')}
+
+
 result_display = app.task(interactive.ProteinMinimizationDisplay(),
                           initial_energy=mm_minimization['initial_energy'],
                           final_energy=mm_minimization['final_energy'],
                           rmsd=mm_minimization['rmsd'],
-                          trajectory=mm_minimization['traj'])
+                          trajectory=mm_minimization['trajectory'])
+
+
+app.set_outputs(prmtop=prep_forcefield['prmtop'],
+                inpcrd=prep_forcefield['inpcrd'],
+                finalpdb=result_coordinates['finalpdb'])
