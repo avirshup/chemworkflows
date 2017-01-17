@@ -1,5 +1,27 @@
 import json
 
+
+def missing_internal_residues(mol):
+    """ Return a list of missing internal residues
+    """
+    missing = mol.metadata.get('missing_residues', None)
+    if missing is None:
+        return {}
+
+    missing_internal = {}
+
+    for chain in mol.chains:
+        missres = missing.get(chain.pdbname, {})
+        if not missres:
+            continue
+        imin, imax = chain.n_terminal.pdbindex, chain.c_terminal.pdbindex
+        for resindex, resname in missres.iteritems():
+            if imin < resindex < imax:
+                missing_internal.setdefault(chain.pdbname, {})[resindex] = resname
+
+    return missing_internal
+
+
 def read_molecule(description):
     """ All-purpose routine for initializing molecules.
     The input "description" must be a yaml or JSON file with exactly one
@@ -16,8 +38,6 @@ def read_molecule(description):
     """
     import moldesign as mdt
 
-    #d = json.loads(description)
-
     d = description
     assert len(d) == 1, "%s %s" %(d, len(d))
 
@@ -32,11 +52,14 @@ def read_molecule(description):
     elif 'inchi' in d:
         assert len(d) == 1
         m = mdt.from_inchi(d['inchi'])
+    elif 'pdb' in d:
+        assert len(d) == 1
+        m = mdt.from_pdb(d['pdb'])
+
     else:
         raise ValueError(description)
 
-    m.write('out.pkl')
-    m.write('out.pdb')
+    return {'mol':m}
 
 
 #def write(fmt):

@@ -1,5 +1,6 @@
 .idea
 out.*
+output/
 
 ### macOS template
 *.DS_Store
