@@ -6,16 +6,20 @@ ligands
 
 """
 
-from .. import common, interactive, config
+from .. import common, interactive
 
 from pyccc import workflow
+_VERSION = "0.0.dev2"
+
+MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
+NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
+MDTAMBERTOOLS = 'docker.io/avirshup/mst:mdt_ambertools-%s' % _VERSION
 
 app = workflow.Workflow('PDB cleaner',
-                        default_docker_image=config.MDTIMAGE)
+                        default_docker_image=MDTIMAGE)
 
 read_molecule = app.task(common.read_molecule,
                          description=app.input('molecule_json'))
-
 
 @app.task(mol=read_molecule['mol'],
           output_type='json')
@@ -58,14 +62,14 @@ def get_ligands(mol):
             'pdbfile': mol.write('pdb')}
 
 
-ligand_choice = app.task(interactive.SelectAtomsFromOptions(),
+ligand_choice = app.task(interactive.select_atoms_from_options,
                          pdbfile=get_ligands['pdbfile'],
                          choices=get_ligands['ligand_options'])
 
 
 @app.task(mol=read_molecule['mol'],
           ligand_atom_ids=ligand_choice['atom_ids'],
-          image=config.MDTAMBERTOOLS)
+          image=MDTAMBERTOOLS)
 def prep_ligand(mol, ligand_atom_ids):
     """
     Create force field parameters for the chosen ligand
@@ -83,7 +87,7 @@ def prep_ligand(mol, ligand_atom_ids):
 @app.task(mol=read_molecule['mol'],
           ligand_atom_ids=ligand_choice['atom_ids'],
           ligand_params=prep_ligand['ligand_parameters'],
-          image=config.MDTAMBERTOOLS)
+          image=MDTAMBERTOOLS)
 def prep_forcefield(mol, ligand_atom_ids, ligand_params):
     """
     Assign forcefield to the protein/ligand complex
@@ -120,7 +124,7 @@ def result_coordinates(traj):
     return {'finalpdb': m.write('pdb')}
 
 
-result_display = app.task(interactive.ProteinMinimizationDisplay(),
+result_display = app.task(interactive.protein_minimization_display,
                           initial_energy=mm_minimization['initial_energy'],
                           final_energy=mm_minimization['final_energy'],
                           rmsd=mm_minimization['rmsd'],
