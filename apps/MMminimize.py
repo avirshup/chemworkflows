@@ -7,9 +7,10 @@ ligands
 """
 
 from .. import common, interactive
+from ..common import missing_internal_residues
 
 from pyccc import workflow
-_VERSION = "0.0.dev2"
+_VERSION = "0.0.dev8"
 
 MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
 NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
@@ -21,10 +22,10 @@ app = workflow.Workflow('PDB cleaner',
 read_molecule = app.task(common.read_molecule,
                          description=app.input('molecule_json'))
 
-@app.task(mol=read_molecule['mol'],
-          output_type='json')
+
+@app.task(mol=read_molecule['mol'])
 def validate(mol):
-    missing = common.missing_internal_residues(mol)
+    missing = missing_internal_residues(mol)
     all_errors = []
 
     for chain_name, reslist in missing.iteritems():

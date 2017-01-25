@@ -1,5 +1,5 @@
 _SOURCES_:
- - ~/mycode/molecular-design-toolkit/docker_images/DockerMake.yml
+ - ~/mycode/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
 
 mdt_subprocess:
   requires:
@@ -11,12 +11,23 @@ mdt_subprocess:
 
 mdt_nwchem:
   requires:
-    - nwchem
     - mdt_subprocess
+    - nwchem
+  copy_from:
+    nwchem:
+      /opt: /
 
 
 mdt_ambertools:
   requires:
-    - ambertools
     - mdt_subprocess
-
+    - ambertools
+runner:
+  build_directory: ../
+  requires:
+    - python_base
+  build: |
+     RUN pip install https://github.com/Autodesk/py-cloud-compute-cannon@workflows
+     COPY . /opt/mdtscripts
+     RUN chmod +x /opt/mdtscripts/run.sh
+     ENTRYPOINT /opt/mdtscripts run.sh

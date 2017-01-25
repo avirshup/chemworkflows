@@ -12,8 +12,7 @@ def missing_internal_residues(mol):
 
     for chain in mol.chains:
         missres = missing.get(chain.pdbname, {})
-        if not missres:
-            continue
+        if not missres: continue
         imin, imax = chain.n_terminal.pdbindex, chain.c_terminal.pdbindex
         for resindex, resname in missres.iteritems():
             if imin < resindex < imax:
@@ -38,11 +37,11 @@ def read_molecule(description):
     """
     import moldesign as mdt
 
-    d = description
-    assert len(d) == 1, "%s %s" %(d, len(d))
+    #d = json.loads(description)
 
+    d = description
     if 'filename' in d:
-        format, compression = mdt.fileio._get_format(d['filename'])
+        format, compression = mdt.fileio._get_format(d['filename'], None)
         m = mdt.read(description['content'], format=format)
     elif 'smiles' in d:
         m = mdt.from_smiles(d['smiles'])
