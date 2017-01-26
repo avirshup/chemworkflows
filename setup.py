@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 with open('requirements.txt', 'r') as reqfile:
     requirements = [x.strip() for x in reqfile if x.strip()]
