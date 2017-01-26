@@ -24,7 +24,7 @@ $ cat inputs/n2.json
 
 2. Pass the input file's path to the `vde` python script:
 ```
-python vde.py inputs/n2.json
+python -
 ```
 
 3. As the job runs, it will list the jobids for each container.

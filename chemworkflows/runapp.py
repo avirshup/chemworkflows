@@ -33,15 +33,16 @@ def runapp(args):
         args.appname, args.inputfile, outdir)
 
     APPNAMES[args.appname](engine, runner, outdir, args.inputfile)
-    print 'DONE. Output is in %s' % outdir
+    print 'DONE. Output directory:'
+    print "    ", os.path.abspath(outdir)
 
 
 def _get_output_dir(modname):
     idir = 0
-    while os.path.exists('%s.out.%d' % (modname,idir)):
+    while os.path.exists('%s.out.%d' % (modname, idir)):
         idir += 1
 
-    outdir = 'outputs.%d' % idir
+    outdir = '%s.out.%d' % (modname, idir)
     return outdir
 
 
