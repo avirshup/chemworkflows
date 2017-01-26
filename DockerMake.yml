@@ -1,3 +1,21 @@
+workflow_qmmm1:
+  FROM: python_deploy_base
+  build_directory: .
+  build: |
+    RUN mkdir -p /opt/mdtscripts/ /inputs /outputs /workdir
+    WORKDIR /workdir
+    ADD ./ /opt/mdtscripts/
+    RUN cd /opt/mdtscripts && \
+       pip install -r requirements.txt
+    ENV PYTHONPATH=$PYTHONPATH:/opt/
+    ENTRYPOINT ["python","-m","mdtscripts","prep_ligands"]
+
+
+
+
+###################################################################
+# Everything below are requirements
+
 _SOURCES_:
  - ~/mycode/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
 

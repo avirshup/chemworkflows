@@ -4,74 +4,72 @@ Calculate the vertical detachment energy of an open shell, anionic species.
 
 """
 
-import common
-import config
+from .. import common
 
 from pyccc import workflow
 
+_VERSION = "0.0.alpha1"
+MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
+NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
+MDTAMBERTOOLS = 'docker.io/avirshup/mst:mdt_ambertools-%s' % _VERSION
+
 vde = workflow.Workflow('Photoelectron spectrum calculator',
-                        default_docker_image=config.MDTIMAGE)
+                        default_docker_image=MDTIMAGE)
 
 read_molecule = vde.task(common.read_molecule,
-                         inputjson=vde.input('molecule_json'))
+                         description=vde.input('molecule_json'))
 
 
-@vde.task(image=config.MDTNWCIMAGE,
+@vde.task(image=NWCHEMIMAGE,
           mol=read_molecule['mol'],
           nsteps=50)
 def minimize_doublet(mol, nsteps=None):
     import moldesign as mdt
+    mol.charge = -1 * mdt.units.q_e
     params = dict(theory='uks',
                   functional='b3lyp',
                   basis='6-31g**',
-                  charge=-1)
+                  charge=-1 * mdt.units.q_e,
+                  multiplicity=2)
     mol.set_energy_model(mdt.models.NWChemQM,
                          **params)
     traj = mol.minimize(nsteps=nsteps)
     return {'traj': traj,
-            'mol': mol}
+            'mol': mol,
+            'pdbstring':mol.write(format='pdb')}
 
 
-@vde.task(name='singlet single point',
-          image=config.MDTNWCIMAGE,
+@vde.task(image=NWCHEMIMAGE,
           mol=minimize_doublet['mol'])
 def single_point_singlet(mol):
     import moldesign as mdt
     from moldesign import units as u
 
-    mol.charge = 0 * u.q_e
+    mol.charge = 0 * mdt.units.q_e
     params = dict(theory='rks',
                   functional='b3lyp',
-                  basis='6-31g**',
-                  charge=0)
+                  basis='6-31g**')
     mol.set_energy_model(mdt.models.NWChemQM,
                          **params)
     mol.calculate()
-
     return {'mol': mol}
 
 
-@vde.task(name='singlet single point',
-          mol=vde.tasks['doublet minimization']['mol'])
-def write_pdb(mol):
-    return {'pdbfile': mol.write(format='pdb')}
-
-
-@vde.task(doublet=vde.tasks['minimize_doublet']['mol'],
-          singlet=vde.tasks['single_point_singlet']['mol'])
+@vde.task(doublet=minimize_doublet['mol'],
+          singlet=single_point_singlet['mol'])
 def get_results(singlet, doublet):
+    results = {'vde': (doublet.potential_energy - singlet.potential_energy).to_json(),
+               'singlet_energy':singlet.potential_energy.to_json(),
+               'doublet_energy':doublet.potential_energy.to_json()}
+    return {'results': results}
 
-    resultjson = {'vde': (doublet.potential_energy - singlet.potential_energy).to_json()}
 
-    return {'results.json': resultjson}
+vde.set_outputs(pdbstring=minimize_doublet['pdbstring'],
+                results=get_results['results'])
 
-
-vde.set_outputs(pdb=write_pdb['pdbfile'],
-                results_json=get_results['results.json'])
-
-vde.metadata = workflow.Metadata(authors=["Aaron Virshup", "Marat Valiev"],
-                                 affiliations=["Autodesk, Inc.",
-                                               "Pacific Northwest National Laboratory"],
-                                 corresponding="Marat Valiev",
-                                 description=__doc__
-                                 )
+#vde.metadata = workflow.Metadata(authors=["Aaron Virshup", "Marat Valiev"],
+#                                 affiliations=["Autodesk, Inc.",
+#                                               "Pacific Northwest National Laboratory"],
+#                                 corresponding="Marat Valiev",
+#                                 description=__doc__
+#                                 )
