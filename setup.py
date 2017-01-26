@@ -1,7 +1,7 @@
 from setuptools import setup
 
-with open('requirements.txt', 'r') as reqfile:
-    requirements = [x.strip() for x in reqfile if x.strip()]
+#with open('requirements.txt', 'r') as reqfile:
+#    requirements = [x.strip() for x in reqfile if x.strip()]
 
 setup(
         name='chemworkflows',
@@ -11,7 +11,7 @@ setup(
         license='Apache 2.0',
         author='Aaron Virshup',
         author_email='aaron.virshup@autodesk.com',
-        install_requires=requirements,
+        install_requires=['docker', 'pyyaml'],
         description='',
         entry_points={
             'console_scripts': [
