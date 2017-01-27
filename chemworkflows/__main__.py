@@ -4,6 +4,7 @@ import argparse
 
 from . import runapp
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('appname')
@@ -11,7 +12,8 @@ def main():
     parser.add_argument('--outputdir', default=None)
     parser.add_argument('--localdocker', action='store_true')
     parser.add_argument('--here', action='store_true')
+    parser.add_argument('--preprocess', action='store_true')
 
     args = parser.parse_args()
 
-    runapp.runapp(args)
+    runapp.main(args)
