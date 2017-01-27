@@ -1,6 +1,8 @@
 import os
+import sys
 import json
-import pickle
+
+import dill
 
 import yaml
 import pyccc
@@ -13,22 +15,24 @@ APPNAMES = {'MMminimize': MMminimize.mm_minimization,
 
 
 def main(args):
-    engine, runner = get_execution_env(args)
-    inputjson = process_input_file(args.inputfile)
     outdir = get_output_dir(args)
+
+    if args.restart:  # restarts branch here!!!
+        restart_workflow(args, outdir)
+        sys.exit(0)
+
+    engine, RunnerClass = get_execution_env(args)
+    inputjson = process_input_file(args.inputfile)
     app = APPNAMES[args.appname]
 
-    runner = runner(app,
-                    engine=engine,
-                    molecule_json=inputjson)
+    runner = RunnerClass(app,
+                         engine=engine,
+                         molecule_json=inputjson)
 
     if args.preprocess:
         run_preprocessing(runner, outdir)
     else:  # run the whole thing
         run_workflow(runner, outdir)
-
-    print 'DONE. Output directory:'
-    print "    ", os.path.abspath(outdir)
 
 
 def run_workflow(runner, outdir):
@@ -41,6 +45,21 @@ def run_workflow(runner, outdir):
                 print >> outfile, value
         else:
             value.put(os.path.join(outdir, name))
+
+    print 'DONE. Output directory:'
+    print "    ", os.path.abspath(outdir)
+
+
+def restart_workflow(args, outdir):
+    with open(args.inputfile, 'r') as infile:
+        runner = dill.load(infile)
+
+    engine, RunnerClass = get_execution_env(args)
+    assert RunnerClass is runner.__class__
+
+    print 'Restarting workflow %s' % runner.workflow.name
+
+    run_workflow(runner, outdir)
 
 
 def run_preprocessing(runner, outdir):
@@ -57,8 +76,11 @@ def run_preprocessing(runner, outdir):
             resultjson[field] = t.getoutput(field)
     with open(os.path.join(outdir, 'prep.json'), 'w') as outfile:
         json.dump(resultjson, outfile)
-    with open(os.path.join(outdir, 'workflow_state.P'), 'w') as outfile:
-        pickle.dump(runner, outfile)
+    with open(os.path.join(outdir, 'workflow_state.dill'), 'w') as outfile:
+        dill.dump(runner, outfile)
+
+    print 'FINISHED preprocessing. Output directory:'
+    print "    ", os.path.abspath(outdir)
 
 
 def get_output_dir(args):

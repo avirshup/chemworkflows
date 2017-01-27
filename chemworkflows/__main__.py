@@ -13,6 +13,7 @@ def main():
     parser.add_argument('--localdocker', action='store_true')
     parser.add_argument('--here', action='store_true')
     parser.add_argument('--preprocess', action='store_true')
+    parser.add_argument('--restart', action='store_true')
 
     args = parser.parse_args()
 
