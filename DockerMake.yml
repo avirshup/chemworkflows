@@ -1,14 +1,14 @@
-workflow_qmmm1:
+workflows:
   FROM: python_deploy_base
   build_directory: .
   build: |
-    RUN mkdir -p /opt/mdtscripts/ /inputs /outputs /workdir
-    WORKDIR /workdir
-    ADD ./ /opt/mdtscripts/
-    RUN cd /opt/mdtscripts && \
-       pip install -r requirements.txt
-    ENV PYTHONPATH=$PYTHONPATH:/opt/
-    ENTRYPOINT ["python","-m","mdtscripts","prep_ligands"]
+    RUN mkdir -p /opt/chemworkflows/ /inputs /outputs
+    WORKDIR /outputs
+    ADD ./ /opt/chemworkflows/
+    RUN cd /opt/chemworkflows \
+       && pip install -r requirements.txt \
+       && pip install -e .
+    ENTRYPOINT ["chemworkflow"]
 
 
 

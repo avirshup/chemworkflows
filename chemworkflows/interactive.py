@@ -1,6 +1,4 @@
 class UserInteraction(object):
-    FRONTENDID = None  # str: metadata for creating the MST frontend UI
-
     def __init__(self):
         self.__name__ = self.__class__.__name__
 
@@ -10,29 +8,28 @@ class UserInteraction(object):
 # for async widgets
 
 
-def select_atoms_from_options(pdbfile, choices):
-    import moldesign as mdt
-    import ipywidgets as ipy
+class SelectAtomsFromOptions(UserInteraction):
+    def __call__(self, choices):
+        if len(choices) > 1:
 
-    # TODO: currently MOCKED
-    # m = mdt.read(pdbfile)
-    # m.draw(display=True)
+            print 'Choose your ligand!'
+            choicelist = choices.items()
 
-    k = choices.keys()[0]
+            for i, (choice, value) in enumerate(choicelist):
+                print '%d) %s: %s' % (i+1, choice, value)
 
-    return {'atom_ids': choices[k]}
+            userinput = ''
+            while not userinput.isalpha():
+                userinput = raw_input('Which ligand (1-%d)? ' % len(choices))
+
+            index = int(userinput) - 1
+            name, atom_ids = choicelist[index]
+
+        else:
+            name = choices.keys()[0]
+            atom_ids = choices.values()[0]
 
 
-def protein_minimization_display(initial_energy,
-                                 final_energy,
-                                 trajectory,
-                                 rmsd):
-    print 'Initial:', initial_energy
-    print 'Final:', final_energy
-    print 'RMSD: ', rmsd
-    try:
-        trajectory.draw(display=True)
-    except:
-        pass
+        return {'ligandname': name,
+                'atom_ids': atom_ids}
 
-    return {}

@@ -17,27 +17,14 @@ MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
 NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
 MDTAMBERTOOLS = 'docker.io/avirshup/mst:mdt_ambertools-%s' % _VERSION
 
-prep_active_site = workflow.Workflow('Prep active site calculations',
-                                     default_docker_image=MDTIMAGE)
+minimization = workflow.Workflow('Refine ligand binding site',
+                                 default_docker_image=MDTIMAGE)
 
-read_molecule = prep_active_site.task(common.read_molecule,
-                                      description=prep_active_site.input('molecule_json'))
-
-
-@prep_active_site.task(mol=read_molecule['mol'])
-def validate(mol):
-    missing = missing_internal_residues(mol)
-    all_errors = []
-
-    for chain_name, reslist in missing.iteritems():
-        all_errors.append('The following residues are not present in the PDB file: %s'
-                          % ','.join(name+num for num, name in reslist.iteritems()))
-
-    return {'success': not all_errors,
-            'errors': all_errors}
+read_molecule = minimization.task(common.read_molecule,
+                                  description=minimization.input('molecule_json'))
 
 
-@prep_active_site.task(mol=read_molecule['mol'])
+@minimization.task(mol=read_molecule['mol'])
 def get_ligands(mol):
     """ Return a dict of possible ligands in the molecule.
     dict is of the form {ligand_name: [atom_idx1, atom_idx2, ...], ...}
@@ -60,33 +47,39 @@ def get_ligands(mol):
                 found_ligands['%s - %s' % (ligand.name, nbr.name)] = \
                     [atom.idx for atom in ligand.atoms+nbr.atoms]
 
-    return {'ligand_options': found_ligands,
-            'pdbfile': mol.write('pdb'),
-            'molpickle': pickle.dumps(mol)}
-
-prep_active_site.set_outputs(ligand_options=get_ligands['ligand_options'],
-                             pdbstring=get_ligands['pdbfile'],
-                             molpickle=get_ligands['molpickle'],
-                             validates=validate['success'],
-                             validation_errors=validate['errors'])
+    return {'ligand_options': found_ligands}
 
 
-run_optimization = workflow.Workflow('Run QM/MM active site calculation',
-                                     default_docker_image=MDTIMAGE)
+@minimization.preprocessor
+@minimization.task(mol=read_molecule['mol'],
+                   ligands=get_ligands['ligand_options'])
+def validate(mol, ligands):
+    missing = missing_internal_residues(mol)
+    all_errors = []
+    success = True
+
+    if len(ligands) == 0:
+        success = False
+        all_errors.append('No ligands found in this structure.')
+
+    for chain_name, reslist in missing.iteritems():
+        success = False
+        all_errors.append('The following residues are not present in the PDB file: %s'
+                          % ','.join(name+num for num, name in reslist.iteritems()))
+
+    return {'success': success,
+            'errors': ' '.join(all_errors),
+            'pdbstring': mol.write('pdb'),
+            'ligands': ligands}
 
 
-@run_optimization.task(pickleurl=run_optimization.input('pickleurl'))
-def getinputmol(pickleurl):
-    import pickle
-    import requests
-    r = requests.get(pickleurl)
-    mol = pickle.loads(r.text)
-    return {'mol': mol}
+atomselection = minimization.task(interactive.SelectAtomsFromOptions(),
+                                  choices=get_ligands['ligand_options'])
 
 
-@run_optimization.task(mol=getinputmol['mol'],
-                       ligand_atom_ids=run_optimization.input('atom_ids'),
-                       image=MDTAMBERTOOLS)
+@minimization.task(mol=read_molecule['mol'],
+                   ligand_atom_ids=atomselection['atom_ids'],
+                   image=MDTAMBERTOOLS)
 def prep_ligand(mol, ligand_atom_ids):
     """
     Create force field parameters for the chosen ligand
@@ -101,10 +94,10 @@ def prep_ligand(mol, ligand_atom_ids):
             'ligand': ligh}
 
 
-@run_optimization.task(mol=getinputmol['mol'],
-                       ligand_atom_ids=run_optimization.input('atom_ids'),
-                       ligand_params=prep_ligand['ligand_parameters'],
-                       image=MDTAMBERTOOLS)
+@minimization.task(mol=read_molecule['mol'],
+                   ligand_atom_ids=atomselection['atom_ids'],
+                   ligand_params=prep_ligand['ligand_parameters'],
+                   image=MDTAMBERTOOLS)
 def prep_forcefield(mol, ligand_atom_ids, ligand_params):
     """
     Assign forcefield to the protein/ligand complex
@@ -122,31 +115,23 @@ def prep_forcefield(mol, ligand_atom_ids, ligand_params):
             'inpcrd': withff.ff.amber_params.inpcrd}
 
 
-@run_optimization.task(mol=prep_forcefield['molecule'])
+@minimization.task(mol=prep_forcefield['molecule'])
 def mm_minimization(mol):
     import moldesign as mdt
     mol.set_energy_model(mdt.models.OpenMMPotential, implicit_solvent='obc')
     traj = mol.minimize(nsteps=2000)
 
+    results = {'initial_energy': traj.frames[0].potential_energy.to_json(),
+               'final_energy': mol.potential_energy.to_json(),
+               'rmsd': traj.rmsd()[-1].to_json()}
+
     return {'trajectory': traj,
             'molecule': mol,
-            'initial_energy': traj.frames[0].potential_energy.to_json(),
-            'final_energy': mol.potential_energy.to_json(),
-            'rmsd': traj.rmsd()[-1].to_json()}
+            'pdbstring': mol.write(format='pdb'),
+            'results': results}
 
 
-@run_optimization.task(traj=mm_minimization['trajectory'])
-def result_coordinates(traj):
-    m = traj.mol
-    return {'finalpdb': m.write('pdb')}
-
-
-result_display = run_optimization.task(interactive.protein_minimization_display,
-                                       initial_energy=mm_minimization['initial_energy'],
-                                       final_energy=mm_minimization['final_energy'],
-                                       rmsd=mm_minimization['rmsd'],
-                                       trajectory=mm_minimization['trajectory'])
-
-run_optimization.set_outputs(prmtop=prep_forcefield['prmtop'],
-                             inpcrd=prep_forcefield['inpcrd'],
-                             finalpdb=result_coordinates['finalpdb'])
+minimization.set_outputs(**{'prmtop': prep_forcefield['prmtop'],
+                            'inpcrd': prep_forcefield['inpcrd'],
+                            'results': mm_minimization['results'],
+                            'final_structure.pdb': mm_minimization['pdbstring']})

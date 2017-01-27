@@ -10,13 +10,12 @@ from pyccc.workflow.runner import SerialCCCRunner, SerialRuntimeRunner
 
 from .apps import vde, MMminimize
 
-APPNAMES = {'MMminimize': MMminimize.mm_minimization,
+APPNAMES = {'minimize': MMminimize.minimization,
             'vde': vde.vde}
 
 
 def main(args):
-    outdir = get_output_dir(args)
-    os.mkdir(outdir)
+    outdir = make_output_dir(args)
 
     if args.restart:  # restarts branch here!!!
         restart_workflow(args, outdir)
@@ -62,7 +61,6 @@ def run_workflow(runner, outdir):
                 dill.dump(value, outfile)
 
 
-
 def restart_workflow(args, outdir):
     with open(args.inputfile, 'r') as infile:
         runner = dill.load(infile)
@@ -81,14 +79,14 @@ def run_preprocessing(runner, outdir):
     print 'FINISHED preprocessing. Output directory:'
     print "    ", os.path.abspath(outdir)
 
-    with open(os.path.join(outdir, 'prep.pdb'), 'w') as outfile:
-        print >> outfile, t
     resultjson = {}
     for field in t.outputs:
         if field == 'pdbstring':
-            continue
+            with open(os.path.join(outdir, 'prep.pdb'), 'w') as outfile:
+                print >> outfile, t.getoutput('pdbstring')
         else:
             resultjson[field] = t.getoutput(field)
+
     with open(os.path.join(outdir, 'prep.json'), 'w') as outfile:
         json.dump(resultjson, outfile)
     with open(os.path.join(outdir, 'workflow_state.dill'), 'w') as outfile:
@@ -96,16 +94,18 @@ def run_preprocessing(runner, outdir):
 
 
 
-def get_output_dir(args):
+def make_output_dir(args):
     if args.outputdir is None:
         idir = 0
-        while os.path.exists('%s.out.%d'%(args.appname, idir)):
+        while os.path.exists('%s.out.%d' % (args.appname, idir)):
             idir += 1
-        outdir = '%s.out.%d'%(args.appname, idir)
-        return outdir
+        outdir = '%s.out.%d' % (args.appname, idir)
+        os.mkdir(outdir)
 
     else:
-        outdir = args.outdir
+        outdir = args.outputdir
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
 
     print 'Running workflow "%s" with input "%s."\nOutputs will be written to "%s".'%(
         args.appname, args.inputfile, outdir)

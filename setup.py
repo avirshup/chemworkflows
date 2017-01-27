@@ -11,7 +11,7 @@ setup(
         license='Apache 2.0',
         author='Aaron Virshup',
         author_email='aaron.virshup@autodesk.com',
-        install_requires=['docker', 'pyyaml'],
+        install_requires=['docker', 'pyyaml', 'dill'],
         description='',
         entry_points={
             'console_scripts': [

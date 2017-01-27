@@ -55,6 +55,46 @@ def read_molecule(description):
         assert len(d) == 1
         m = mdt.from_pdb(d['pdb'])
 
+    elif 'input' in d:
+        assert len(d) == 1
+        content = d['input']
+
+        if len(d) == 4 and d[0].isdigit():
+            try:
+                m = mdt.from_pdb(content)
+            except:
+                pass
+            else:
+                print 'Reading molecule as PDB ID %s' % d
+                return {'mol':m}
+
+        try:
+            m = mdt.from_smiles(content)
+        except:
+            pass
+        else:
+            print 'Reading molecule as smiles %s' % d
+            return {'mol':m}
+
+        try:
+            m = mdt.from_name(content)
+        except:
+            pass
+        else:
+            print 'Reading molecule as IUPAC name %s' % d
+            return {'mol': m}
+
+        try:
+            m = mdt.from_inchi(content)
+        except:
+            pass
+        else:
+            print 'Reading molecule as inchi string %s' % d
+            return {'mol': m}
+
+        raise ValueError(d)
+
+
     else:
         raise ValueError(description)
 
