@@ -12,7 +12,7 @@ from ..common import missing_internal_residues
 
 from pyccc import workflow
 
-_VERSION = "0.0.alpha0"
+_VERSION = "0.0.alpha2"
 MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
 NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
 MDTAMBERTOOLS = 'docker.io/avirshup/mst:mdt_ambertools-%s' % _VERSION
