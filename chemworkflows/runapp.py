@@ -16,6 +16,7 @@ APPNAMES = {'MMminimize': MMminimize.mm_minimization,
 
 def main(args):
     outdir = get_output_dir(args)
+    os.mkdir(outdir)
 
     if args.restart:  # restarts branch here!!!
         restart_workflow(args, outdir)
@@ -38,16 +39,28 @@ def main(args):
 def run_workflow(runner, outdir):
     runner.run()
 
-    os.mkdir(outdir)
-    for name, value in runner.outputs:
-        if isinstance(value, basestring):
-            with open(os.path.join(outdir, name), 'w') as outfile:
-                print >> outfile, value
-        else:
-            value.put(os.path.join(outdir, name))
-
     print 'DONE. Output directory:'
     print "    ", os.path.abspath(outdir)
+
+    with open(os.path.join(outdir,'workflow_state.dill'), 'w') as outfile:
+        dill.dump(runner, outfile)
+    for name, value in runner.outputs.iteritems():
+        filebase = os.path.join(outdir, name)
+        if isinstance(value, basestring):
+            with open(filebase, 'w') as outfile:
+                print >> outfile, value
+        elif isinstance(value, dict):
+            with open(filebase + '.json', 'w') as outfile:
+                json.dump(value, outfile)
+        elif hasattr(value, 'put'):
+            value.put(filebase)
+        elif hasattr(value, 'read'):
+            with open(filebase, 'w') as outfile:
+                print >> outfile, value.read
+        else:
+            with open(filebase + '.dill', 'w') as outfile:
+                dill.dump(value, outfile)
+
 
 
 def restart_workflow(args, outdir):
@@ -65,7 +78,9 @@ def restart_workflow(args, outdir):
 def run_preprocessing(runner, outdir):
     t = runner.preprocess()
 
-    os.mkdir(outdir)
+    print 'FINISHED preprocessing. Output directory:'
+    print "    ", os.path.abspath(outdir)
+
     with open(os.path.join(outdir, 'prep.pdb'), 'w') as outfile:
         print >> outfile, t
     resultjson = {}
@@ -79,8 +94,6 @@ def run_preprocessing(runner, outdir):
     with open(os.path.join(outdir, 'workflow_state.dill'), 'w') as outfile:
         dill.dump(runner, outfile)
 
-    print 'FINISHED preprocessing. Output directory:'
-    print "    ", os.path.abspath(outdir)
 
 
 def get_output_dir(args):

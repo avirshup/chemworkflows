@@ -90,8 +90,10 @@ def get_results(singlet, doublet):
     return {'results': results}
 
 
-vde.set_outputs(pdbstring=minimize_doublet['pdbstring'],
-                results=get_results['results'])
+outputs = {'final_structure.pdb': minimize_doublet['pdbstring'],
+           'results': get_results['results']}
+
+vde.set_outputs(**outputs)
 
 #vde.metadata = workflow.Metadata(authors=["Aaron Virshup", "Marat Valiev"],
 #                                 affiliations=["Autodesk, Inc.",

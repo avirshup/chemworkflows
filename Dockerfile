@@ -1,7 +1,7 @@
 FROM python:2.7-slim
-RUN mkdir -p /opt/mdtscripts/ /inputs /outputs
+RUN mkdir -p /opt/chemworkflows/ /inputs /outputs
 WORKDIR /outputs
-ADD ./ /opt/mdtscripts/
-RUN cd /opt/mdtscripts && \
-   pip install -r requirements.txt
-ENTRYPOINT ["python","/opt/mdtscripts/vde.py"]
+ADD ./ /opt/chemworkflows/
+RUN cd /opt/chemworkflows \
+ && pip install -e .
+ENTRYPOINT ["chemworkflow"]
