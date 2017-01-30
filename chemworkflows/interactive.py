@@ -19,7 +19,7 @@ class SelectAtomsFromOptions(UserInteraction):
                 print '%d) %s: %s' % (i+1, choice, value)
 
             userinput = ''
-            while not userinput.isalpha():
+            while not (userinput.isdigit() and 1 <= int(userinput) <= len(choices)):
                 userinput = raw_input('Which ligand (1-%d)? ' % len(choices))
 
             index = int(userinput) - 1
@@ -32,4 +32,5 @@ class SelectAtomsFromOptions(UserInteraction):
 
         return {'ligandname': name,
                 'atom_ids': atom_ids}
+
 

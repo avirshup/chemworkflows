@@ -57,48 +57,48 @@ def read_molecule(description):
 
     elif 'input' in d:
         assert len(d) == 1
-        content = d['input']
+        data = d['input']
 
-        if len(d) == 4 and d[0].isdigit():
+        if len(data) == 4 and data[0].isdigit():
             try:
-                m = mdt.from_pdb(content)
+                m = mdt.from_pdb(data)
             except:
                 pass
             else:
-                print 'Reading molecule as PDB ID %s' % d
+                print 'Reading molecule as PDB ID "%s"' % data
                 return {'mol':m}
 
         try:
-            m = mdt.from_smiles(content)
+            m = mdt.from_smiles(data)
         except:
             pass
         else:
-            print 'Reading molecule as smiles %s' % d
+            print 'Reading molecule as smiles "%s"' % data
             return {'mol':m}
 
         try:
-            m = mdt.from_name(content)
+            m = mdt.from_name(data)
         except:
             pass
         else:
-            print 'Reading molecule as IUPAC name %s' % d
+            print 'Reading molecule as IUPAC name "%s"' % data
             return {'mol': m}
 
         try:
-            m = mdt.from_inchi(content)
+            m = mdt.from_inchi(data)
         except:
             pass
         else:
-            print 'Reading molecule as inchi string %s' % d
+            print 'Reading molecule as inchi string "%s"' % data
             return {'mol': m}
 
-        raise ValueError(d)
+        raise ValueError("Failed to parse input data '%s' as PDB id, SMILES, IUPAC, or INCHI")
 
 
     else:
         raise ValueError(description)
 
-    return {'mol':m}
+    return {'mol': m}
 
 
 #def write(fmt):

@@ -29,6 +29,9 @@ def main(args):
                          engine=engine,
                          molecule_json=inputjson)
 
+    if args.setoutput:
+        set_ui_outputs(runner)
+
     if args.preprocess:
         run_preprocessing(runner, outdir)
     else:  # run the whole thing
@@ -43,13 +46,22 @@ def run_workflow(runner, outdir):
 
     with open(os.path.join(outdir,'workflow_state.dill'), 'w') as outfile:
         dill.dump(runner, outfile)
-    for name, value in runner.outputs.iteritems():
+
+    write_outputs(runner, outdir)
+
+
+def write_outputs(runner, outdir):
+    """ Write a finished workflow's outputs to disk
+    """
+    for name in runner.workflow.outputfields:
+        value = runner.getoutput(name)
+
         filebase = os.path.join(outdir, name)
         if isinstance(value, basestring):
             with open(filebase, 'w') as outfile:
                 print >> outfile, value
         elif isinstance(value, dict):
-            with open(filebase + '.json', 'w') as outfile:
+            with open(filebase+'.json', 'w') as outfile:
                 json.dump(value, outfile)
         elif hasattr(value, 'put'):
             value.put(filebase)
@@ -57,7 +69,7 @@ def run_workflow(runner, outdir):
             with open(filebase, 'w') as outfile:
                 print >> outfile, value.read
         else:
-            with open(filebase + '.dill', 'w') as outfile:
+            with open(filebase+'.dill', 'w') as outfile:
                 dill.dump(value, outfile)
 
 
@@ -68,9 +80,29 @@ def restart_workflow(args, outdir):
     engine, RunnerClass = get_execution_env(args)
     assert RunnerClass is runner.__class__
 
-    print 'Restarting workflow %s' % runner.workflow.name
+    if args.setoutput:
+        set_ui_outputs(runner, args)
+
+    print ' ----   RESTARTING WORKFLOW "%s"   ----\n' % runner.workflow.name
 
     run_workflow(runner, outdir)
+
+
+def set_ui_outputs(runner, args):
+    """ Set the outputs of frontend tasks
+
+    ``args.setoutput`` is a list tasks and output files of the form
+    ``"[taskname]=[output json file]"``
+    """
+    for item in args.setoutput:
+        taskname, filename = item.split('=')
+        task = runner.tasks[taskname]
+        with open(filename, 'r') as infile:
+            taskoutput = json.load(infile)
+
+        print 'Setting output of UI task "%s" to contents of %s' % (taskname, filename)
+        runner.tasks[taskname] = pyccc.workflow.MockUITask(task.spec, taskoutput)
+    print
 
 
 def run_preprocessing(runner, outdir):
@@ -93,8 +125,11 @@ def run_preprocessing(runner, outdir):
         dill.dump(runner, outfile)
 
 
-
 def make_output_dir(args):
+    """ Create a local output directory to hold the results. If the output directory is not
+    explicitly specified, always create a new, unique directory. Otherwise, put the outputs
+    wherever requested.
+    """
     if args.outputdir is None:
         idir = 0
         while os.path.exists('%s.out.%d' % (args.appname, idir)):
@@ -113,6 +148,8 @@ def make_output_dir(args):
 
 
 def get_execution_env(args):
+    """ Figure out where the workflow will run and how we'll run it
+    """
     runner = SerialCCCRunner
     if args.localdocker:
         assert not args.here
@@ -136,6 +173,8 @@ def get_engine():
 
 
 def process_input_file(inputfile):
+    """ Figure out whether we're being passed a file, a description of a file, or just raw JSON
+    """
     try:
         jsraw = _get_json(inputfile)
     except ValueError:

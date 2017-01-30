@@ -74,17 +74,21 @@ def validate(mol, ligands):
 
 
 atomselection = minimization.task(interactive.SelectAtomsFromOptions(),
+                                  taskname='user_atom_selection',
                                   choices=get_ligands['ligand_options'])
 
 
 @minimization.task(mol=read_molecule['mol'],
                    ligand_atom_ids=atomselection['atom_ids'],
+                   ligandname=atomselection['ligandname'],
                    image=MDTAMBERTOOLS)
-def prep_ligand(mol, ligand_atom_ids):
+def prep_ligand(mol, ligand_atom_ids, ligandname):
     """
     Create force field parameters for the chosen ligand
     """
     import moldesign as mdt
+
+    print 'Parameterizing ligand "%s"' % ligandname
 
     ligand = mdt.Molecule([mol.atoms[idx] for idx in ligand_atom_ids])
     #ligh = mdt.set_hybridization_and_ph(ligand, 7.4)
@@ -104,7 +108,12 @@ def prep_forcefield(mol, ligand_atom_ids, ligand_params):
     """
     import moldesign as mdt
 
-    mdt.guess_histidine_states(mol)
+    for residue in mol.residues:
+        if residue.resname == 'HIS':
+            print 'Guessing histidine protonation based on hydrogens present in file:'
+            mdt.guess_histidine_states(mol)
+            break
+
     stripmol = mdt.Molecule([atom for atom in mol.atoms
                              if atom.residue.type in ('dna', 'protein')
                              or atom.index in ligand_atom_ids])

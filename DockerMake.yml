@@ -12,12 +12,17 @@ workflows:
 
 
 
-
 ###################################################################
 # Everything below are requirements
 
 _SOURCES_:
  - ~/mycode/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
+
+_ALL_:
+  - mdt_subprocess
+  - mdt_nwchem
+  - mdt_ambertools
+
 
 mdt_subprocess:
   requires:
