@@ -12,8 +12,7 @@ def missing_internal_residues(mol):
 
     for chain in mol.chains:
         missres = missing.get(chain.pdbname, {})
-        if not missres:
-            continue
+        if not missres: continue
         imin, imax = chain.n_terminal.pdbindex, chain.c_terminal.pdbindex
         for resindex, resname in missres.iteritems():
             if imin < resindex < imax:
@@ -38,11 +37,11 @@ def read_molecule(description):
     """
     import moldesign as mdt
 
-    d = description
-    assert len(d) == 1, "%s %s" %(d, len(d))
+    #d = json.loads(description)
 
+    d = description
     if 'filename' in d:
-        format, compression = mdt.fileio._get_format(d['filename'])
+        format, compression = mdt.fileio._get_format(d['filename'], None)
         m = mdt.read(description['content'], format=format)
     elif 'smiles' in d:
         m = mdt.from_smiles(d['smiles'])
@@ -56,10 +55,50 @@ def read_molecule(description):
         assert len(d) == 1
         m = mdt.from_pdb(d['pdb'])
 
+    elif 'input' in d:
+        assert len(d) == 1
+        data = d['input']
+
+        if len(data) == 4 and data[0].isdigit():
+            try:
+                m = mdt.from_pdb(data)
+            except:
+                pass
+            else:
+                print 'Reading molecule as PDB ID "%s"' % data
+                return {'mol':m}
+
+        try:
+            m = mdt.from_smiles(data)
+        except:
+            pass
+        else:
+            print 'Reading molecule as smiles "%s"' % data
+            return {'mol':m}
+
+        try:
+            m = mdt.from_name(data)
+        except:
+            pass
+        else:
+            print 'Reading molecule as IUPAC name "%s"' % data
+            return {'mol': m}
+
+        try:
+            m = mdt.from_inchi(data)
+        except:
+            pass
+        else:
+            print 'Reading molecule as inchi string "%s"' % data
+            return {'mol': m}
+
+        raise ValueError("Failed to parse input data '%s' as PDB id, SMILES, IUPAC, or INCHI")
+
+
     else:
         raise ValueError(description)
 
-    return {'mol':m}
+    return {'mol': m}
 
 
 #def write(fmt):

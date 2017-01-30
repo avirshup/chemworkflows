@@ -1,22 +1,56 @@
+workflows:
+  FROM: python_deploy_base
+  build_directory: .
+  build: |
+    RUN mkdir -p /opt/chemworkflows/ /inputs /outputs
+    WORKDIR /outputs
+    ADD ./ /opt/chemworkflows/
+    RUN cd /opt/chemworkflows \
+       && pip install -r requirements.txt \
+       && pip install -e .
+    ENTRYPOINT ["chemworkflow"]
+
+
+
+###################################################################
+# Everything below are requirements
+
 _SOURCES_:
- - ~/mycode/molecular-design-toolkit/docker_images/DockerMake.yml
+ - ~/mycode/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
+
+_ALL_:
+  - mdt_subprocess
+  - mdt_nwchem
+  - mdt_ambertools
+
 
 mdt_subprocess:
   requires:
    - moldesign_complete
   build: |
    RUN mkdir -p ~/.moldesign \
-    && echo -e "engine_type: subprocess\n" > ~/.moldesign/moldesign.yml
+    && echo "engine_type: subprocess" > ~/.moldesign/moldesign.yml
 
 
 mdt_nwchem:
   requires:
     - mdt_subprocess
     - nwchem
+  copy_from:
+    nwchem:
+      /opt: /
 
 
 mdt_ambertools:
   requires:
     - mdt_subprocess
     - ambertools
-
+runner:
+  build_directory: ../
+  requires:
+    - python_base
+  build: |
+     RUN pip install https://github.com/Autodesk/py-cloud-compute-cannon@workflows
+     COPY . /opt/mdtscripts
+     RUN chmod +x /opt/mdtscripts/run.sh
+     ENTRYPOINT /opt/mdtscripts run.sh

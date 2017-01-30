@@ -1,0 +1,13 @@
+*.pyc
+*.pyo
+.idea
+lastfailed
+docs
+./dist/
+./build/
+*.egg-info
+.dockerignore
+__pycache__
+Dockerfile
+*.bak
+
