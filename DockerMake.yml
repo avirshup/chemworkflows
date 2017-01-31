@@ -22,6 +22,7 @@ _ALL_:
   - mdt_subprocess
   - mdt_nwchem
   - mdt_ambertools
+  - workflows
 
 
 mdt_subprocess:

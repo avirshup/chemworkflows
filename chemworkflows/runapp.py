@@ -77,6 +77,9 @@ def restart_workflow(args, outdir):
     with open(args.inputfile, 'r') as infile:
         runner = dill.load(infile)
 
+    if isinstance(runner.engine, pyccc.Docker) and runner.engine.client is None:
+        runner.engine.client = runner.engine.connect_to_docker()
+
     engine, RunnerClass = get_execution_env(args)
     assert RunnerClass is runner.__class__
 
@@ -112,7 +115,7 @@ def run_preprocessing(runner, outdir):
     print "    ", os.path.abspath(outdir)
 
     resultjson = {}
-    for field in t.outputs:
+    for field in t.outputfields:
         if field == 'pdbstring':
             with open(os.path.join(outdir, 'prep.pdb'), 'w') as outfile:
                 print >> outfile, t.getoutput('pdbstring')
