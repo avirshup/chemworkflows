@@ -30,47 +30,32 @@ def main(args):
                          molecule_json=inputjson)
 
     if args.setoutput:
-        set_ui_outputs(runner)
+        set_ui_outputs(runner, args)
 
     if args.preprocess:
         run_preprocessing(runner, outdir)
     else:  # run the whole thing
         run_workflow(runner, outdir)
 
+    if args.dumptasks:
+        dump_all_tasks(runner, outdir)
+
 
 def run_workflow(runner, outdir):
     runner.run()
 
-    print 'DONE. Output directory:'
+    print '\nWorkflow complete. Output directory:'
     print "    ", os.path.abspath(outdir)
 
-    with open(os.path.join(outdir,'workflow_state.dill'), 'w') as outfile:
-        dill.dump(runner, outfile)
+    try:
+        with open(os.path.join(outdir, 'workflow_state.dill'), 'w') as outfile:
+            dill.dump(runner, outfile)
+    except Exception as e:
+        print 'ERROR IGNORED: failed to save workflow state'
+        print e
+        print 'IGNORING ...'
 
     write_outputs(runner, outdir)
-
-
-def write_outputs(runner, outdir):
-    """ Write a finished workflow's outputs to disk
-    """
-    for name in runner.workflow.outputfields:
-        value = runner.getoutput(name)
-
-        filebase = os.path.join(outdir, name)
-        if isinstance(value, basestring):
-            with open(filebase, 'w') as outfile:
-                print >> outfile, value
-        elif isinstance(value, dict):
-            with open(filebase+'.json', 'w') as outfile:
-                json.dump(value, outfile)
-        elif hasattr(value, 'put'):
-            value.put(filebase)
-        elif hasattr(value, 'read'):
-            with open(filebase, 'w') as outfile:
-                print >> outfile, value.read
-        else:
-            with open(filebase+'.dill', 'w') as outfile:
-                dill.dump(value, outfile)
 
 
 def restart_workflow(args, outdir):
@@ -89,6 +74,56 @@ def restart_workflow(args, outdir):
     print ' ----   RESTARTING WORKFLOW "%s"   ----\n' % runner.workflow.name
 
     run_workflow(runner, outdir)
+    if args.dumptasks:
+        dump_all_tasks(runner, outdir)
+
+
+def dump_all_tasks(runner, outdir):
+    for taskname, task in runner.tasks.iteritems():
+        if task.finished:
+            taskdir = os.path.join(outdir, taskname)
+            print 'Writing task %s -> %s' % (taskname, taskdir)
+
+            if not os.path.exists(taskdir):
+                os.mkdir(taskdir)
+
+            try:
+                write_outputs(task, taskdir)
+            except Exception as exc:
+                print 'Failed to write outputs for %s' % task
+                print exc
+
+
+def write_outputs(runner, outdir):
+    """ Write a finished workflow's outputs to disk
+    """
+    for name in runner.outputfields:
+        value = runner.getoutput(name)
+        filebase = os.path.join(outdir, name)
+        fname = filebase
+        if isinstance(value, basestring):
+            with open(filebase, 'w') as outfile:
+                print >> outfile, value
+        elif hasattr(value, 'put'):
+            value.put(filebase)
+        elif hasattr(value, 'read'):
+            with open(filebase, 'w') as outfile:
+                print >> outfile, value.read
+        else:  # try to serialize
+            try:
+                jsonstr = json.dumps(value)
+            except TypeError:
+                fname = filebase+'.dill'
+                with open(fname, 'w') as outfile:
+                    dill.dump(value, outfile)
+            else:
+                fname = filebase+'.json'
+                with open(fname, 'w') as outfile:
+                    print >> outfile, jsonstr
+
+        if fname.split('.')[-2:] == ['tar', 'gz']:
+            os.system('tar xvzf %s' % fname)
+
 
 
 def set_ui_outputs(runner, args):
@@ -111,7 +146,7 @@ def set_ui_outputs(runner, args):
 def run_preprocessing(runner, outdir):
     t = runner.preprocess()
 
-    print 'FINISHED preprocessing. Output directory:'
+    print '\nFINISHED preprocessing. Output directory:'
     print "    ", os.path.abspath(outdir)
 
     resultjson = {}

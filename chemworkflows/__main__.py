@@ -17,6 +17,7 @@ def main():
     parser.add_argument('--restart', action='store_true')
     parser.add_argument('--setoutput', nargs='*',
                         help=SETOUTPUTHELP)
+    parser.add_argument('--dumptasks', action='store_true')
 
     args = parser.parse_args()
 

@@ -8,7 +8,7 @@ from .. import common
 
 from pyccc import workflow
 
-_VERSION = "0.0.alpha3"
+_VERSION = "0.0.alpha5"
 MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
 NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
 MDTAMBERTOOLS = 'docker.io/avirshup/mst:mdt_ambertools-%s' % _VERSION

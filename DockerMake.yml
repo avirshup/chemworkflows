@@ -27,6 +27,7 @@ _ALL_:
 
 mdt_subprocess:
   requires:
+   - opsin
    - moldesign_complete
   build: |
    RUN mkdir -p ~/.moldesign \
