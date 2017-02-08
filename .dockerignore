@@ -10,4 +10,4 @@ docs
 __pycache__
 Dockerfile
 *.bak
-
+*.out.*

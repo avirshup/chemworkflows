@@ -8,7 +8,7 @@ from .. import common
 
 from pyccc import workflow
 
-_VERSION = "0.0.alpha5"
+_VERSION = "0.0.1b1"
 MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
 NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
 MDTAMBERTOOLS = 'docker.io/avirshup/mst:mdt_ambertools-%s' % _VERSION
@@ -54,7 +54,7 @@ def minimize_doublet(mol, nsteps=None):
     mol.charge = -1 * mdt.units.q_e
     params = dict(theory='uks',
                   functional='b3lyp',
-                  basis='6-31g**',
+                  basis='6-31g',
                   charge=-1 * mdt.units.q_e,
                   multiplicity=2)
     mol.set_energy_model(mdt.models.NWChemQM,
@@ -74,7 +74,7 @@ def single_point_singlet(mol):
     mol.charge = 0 * mdt.units.q_e
     params = dict(theory='rks',
                   functional='b3lyp',
-                  basis='6-31g**')
+                  basis='6-31g')
     mol.set_energy_model(mdt.models.NWChemQM,
                          **params)
     mol.calculate()

@@ -1,4 +1,6 @@
 class UserInteraction(object):
+    __interactive__ = True
+
     def __init__(self):
         self.__name__ = self.__class__.__name__
 
@@ -28,6 +30,8 @@ class SelectAtomsFromOptions(UserInteraction):
         else:
             name = choices.keys()[0]
             atom_ids = choices.values()[0]
+            print 'Identified ligand %s' % name
+            print 'Ligand atoms:', atom_ids
 
 
         return {'ligandname': name,

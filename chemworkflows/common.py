@@ -1,6 +1,3 @@
-import json
-
-
 def missing_internal_residues(mol):
     """ Return a list of missing internal residues
     """
@@ -62,37 +59,38 @@ def read_molecule(description):
         if len(data) == 4 and data[0].isdigit():
             try:
                 m = mdt.from_pdb(data)
-            except:
-                pass
+            except Exception as e:
+                print 'Not recognized as PDB ID', e
             else:
                 print 'Reading molecule as PDB ID "%s"' % data
                 return {'mol':m}
 
         try:
             m = mdt.from_smiles(data)
-        except:
-            pass
+        except Exception as e:
+            print 'Not recognized as SMILES name', e
         else:
             print 'Reading molecule as smiles "%s"' % data
             return {'mol':m}
 
         try:
             m = mdt.from_name(data)
-        except:
-            pass
+        except Exception as e:
+            print 'Not recognized as IUPAC name', e
         else:
             print 'Reading molecule as IUPAC name "%s"' % data
             return {'mol': m}
 
         try:
             m = mdt.from_inchi(data)
-        except:
-            pass
+        except Exception as e:
+            print 'Not recognized as INCHI string', e
         else:
             print 'Reading molecule as inchi string "%s"' % data
             return {'mol': m}
 
-        raise ValueError("Failed to parse input data '%s' as PDB id, SMILES, IUPAC, or INCHI")
+        raise ValueError("Failed to parse input data '%s' as PDB id, SMILES, IUPAC, or INCHI" %
+                         data)
 
 
     else:
