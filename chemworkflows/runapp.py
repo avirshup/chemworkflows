@@ -3,6 +3,7 @@ import sys
 import json
 
 import dill
+dill.extend(False)  # needing to do this is bullshit
 
 import yaml
 import pyccc
@@ -123,7 +124,6 @@ def write_outputs(runner, outdir):
 
         if fname.split('.')[-2:] == ['tar', 'gz']:
             os.system('tar xvzf %s' % fname)
-
 
 
 def set_ui_outputs(runner, args):

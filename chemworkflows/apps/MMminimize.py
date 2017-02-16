@@ -7,22 +7,39 @@ ligands
 """
 from .. import common, interactive
 from ..common import missing_internal_residues
+from ..utils import get_asset
 
 from pyccc import workflow
 
-_VERSION = "0.0.1b1"
+METADATA = dict(id='1',
+                version_id='1beta6',
+                title='Refine a protein-ligand complex',
+                selectLigands=True,
+                bgIndex=3,
+                bgColor='#292E60',
+                color='#2FE695',
+                comingSoon=False,
+                creatorImage=get_asset('boundligand.png'),
+                description='Automatically parameterize and refine a small '
+                            'molecule bound to a protein')
+
+_VERSION = "0.0.1b6"
 MDTIMAGE = 'docker.io/avirshup/mst:mdt_subprocess-%s' % _VERSION
 NWCHEMIMAGE = 'docker.io/avirshup/mst:mdt_nwchem-%s' % _VERSION
 MDTAMBERTOOLS = 'docker.io/avirshup/mst:mdt_ambertools-%s' % _VERSION
 
 minimization = workflow.Workflow('Refine ligand binding site',
-                                 default_docker_image=MDTIMAGE)
+                                 default_docker_image=MDTIMAGE,
+                                 metadata=METADATA)
 
 read_molecule = minimization.task(common.read_molecule,
-                                  description=minimization.input('molecule_json'))
+                                  description=minimization.input('molecule_json'),
+                                  __interactive__=True)
 
 
-@minimization.task(mol=read_molecule['mol'])
+
+@minimization.task(mol=read_molecule['mol'],
+                   __interactive__=True)
 def get_ligands(mol):
     """ Return a dict of possible ligands in the molecule.
     dict is of the form {ligand_name: [atom_idx1, atom_idx2, ...], ...}
@@ -30,8 +47,7 @@ def get_ligands(mol):
 
     Ligands can span, at most, 2 different residues
     """
-    ligands = [residue for residue in mol.residues
-               if residue.type == 'unknown']
+    ligands = [residue for residue in mol.residues if residue.type == 'unknown']
 
     found_ligands = {}
     mv_ligand_strings = {}  # temp - selection strings for molecule viewer
@@ -62,7 +78,8 @@ def get_ligands(mol):
 @minimization.preprocessor
 @minimization.task(mol=read_molecule['mol'],
                    ligands=get_ligands['ligand_options'],
-                   mv_ligand_strings=get_ligands['mv_ligand_strings'])
+                   mv_ligand_strings=get_ligands['mv_ligand_strings'],
+                   __interactive__=True)
 def validate(mol, ligands, mv_ligand_strings):
     missing = missing_internal_residues(mol)
     all_errors = []
@@ -85,14 +102,15 @@ def validate(mol, ligands, mv_ligand_strings):
 
 
 atomselection = minimization.task(interactive.SelectAtomsFromOptions(),
-                                  taskname='user_atom_selection',
-                                  choices=get_ligands['ligand_options'])
+                                  __taskname__='user_atom_selection',
+                                  choices=get_ligands['ligand_options'],
+                                  __interactive__=True)
 
 
 @minimization.task(mol=read_molecule['mol'],
                    ligand_atom_ids=atomselection['atom_ids'],
                    ligandname=atomselection['ligandname'],
-                   image=MDTAMBERTOOLS)
+                   __image__=MDTAMBERTOOLS)
 def prep_ligand(mol, ligand_atom_ids, ligandname):
     """
     Create force field parameters for the chosen ligand
@@ -103,8 +121,7 @@ def prep_ligand(mol, ligand_atom_ids, ligandname):
 
     ligand = mdt.Molecule([mol.atoms[idx] for idx in ligand_atom_ids])
     ligh = mdt.set_hybridization_and_ph(ligand, 7.4)
-    #ligh = ligand
-    params = mdt.interfaces.ambertools.parameterize(ligh, charges='gasteiger')
+    params = mdt.interfaces.ambertools.parameterize(ligh, charges='am1-bcc')
     return {'ligand_parameters': params,
             'ligand': ligh}
 
@@ -112,7 +129,7 @@ def prep_ligand(mol, ligand_atom_ids, ligandname):
 @minimization.task(mol=read_molecule['mol'],
                    ligand_atom_ids=atomselection['atom_ids'],
                    ligand_params=prep_ligand['ligand_parameters'],
-                   image=MDTAMBERTOOLS)
+                   __image__=MDTAMBERTOOLS)
 def prep_forcefield(mol, ligand_atom_ids, ligand_params):
     """
     Assign forcefield to the protein/ligand complex
@@ -138,14 +155,34 @@ def prep_forcefield(mol, ligand_atom_ids, ligand_params):
 @minimization.task(mol=prep_forcefield['molecule'])
 def mm_minimization(mol):
     import moldesign as mdt
+    from moldesign import units as u
+
     mol.set_energy_model(mdt.models.OpenMMPotential, implicit_solvent='obc')
-    traj = mol.minimize(nsteps=2000)
+
+    # start with a native gradient descent -
+    # mostly to provide some intermediate states for animation
+    traj = mdt.min.gradient_descent(mol, frame_interval=250, nsteps=1000)
+    traj2 = mol.minimize() # native openmm optimization
+    traj.new_frame() # Add final OpenMM state to the native steepest descent trajectory
 
     results = {'initial_energy': traj.frames[0].potential_energy.to_json(),
                'final_energy': mol.potential_energy.to_json(),
                'rmsd': traj.rmsd()[-1].to_json()}
 
     minstep_file, minstep_filenames = _traj_to_tarred_pdbs(traj)
+
+    rmsd_json = traj.rmsd()[-1].to(u.angstrom).to_json()
+    rmsd_json['name'] = 'RMSD'
+
+    stabilized_energy = traj.frames[0].potential_energy.to(u.kcalpermol).to_json()
+    stabilized_energy['units'] = 'kcal/mol'
+    stabilized_energy['name'] = 'Energy stabilization'
+
+    final_energy_json = mol.potential_energy.to(u.kcalpermol).to_json()
+    final_energy_json['units'] = 'kcal/mol'
+    final_energy_json['name'] = 'Final energy'
+
+    results['output_values'] = [final_energy_json, stabilized_energy, rmsd_json]
 
     return {'trajectory': traj,
             'molecule': mol,
@@ -161,6 +198,7 @@ minimization.set_outputs(**{'prmtop': prep_forcefield['prmtop'],
                             'minsteps.tar.gz': mm_minimization['minsteps.tar.gz'],
                             'minstep_frames': mm_minimization['minstep_frames']
                             })
+
 
 def _traj_to_tarred_pdbs(traj):
     """ Quick hack to create a tarfile with frames from a trajectory

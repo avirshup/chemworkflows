@@ -1,22 +1,5 @@
-workflows:
-  FROM: python_deploy_base
-  build_directory: .
-  build: |
-    RUN mkdir -p /opt/chemworkflows/ /inputs /outputs
-    WORKDIR /outputs
-    ADD ./ /opt/chemworkflows/
-    RUN cd /opt/chemworkflows \
-       && pip install -r requirements.txt \
-       && pip install -e .
-    ENTRYPOINT ["chemworkflow"]
-
-
-
-###################################################################
-# Everything below are requirements
-
 _SOURCES_:
- - ~/mycode/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
+ - ~/mycode/public_clean/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
 
 _ALL_:
   - mdt_subprocess
@@ -32,6 +15,20 @@ mdt_subprocess:
   build: |
    RUN mkdir -p ~/.moldesign \
     && echo "engine_type: subprocess" > ~/.moldesign/moldesign.yml
+
+
+workflows:
+  requires:
+    - mdt_subprocess
+  build_directory: .
+  build: |
+    RUN mkdir -p /opt/chemworkflows/ /inputs /outputs
+    WORKDIR /outputs
+    ADD ./ /opt/chemworkflows/
+    RUN cd /opt/chemworkflows \
+       && pip install -r requirements.txt \
+       && pip install -e .
+    ENTRYPOINT ["chemworkflow"]
 
 
 mdt_nwchem:

@@ -45,6 +45,13 @@ def finish_job(job, wait):
     return job
 
 
+def get_asset(filename):
+    import os
+    thispath = os.path.dirname(os.path.abspath(__file__))
+    filepath = os.path.join(thispath, 'assets', filename)
+    return open(filepath)
+
+
 def submit_job(job, image=None, wait=True):
     """ Runs a job object. This is usually something created by MDT
     that drives an external tool
