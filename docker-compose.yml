@@ -1,0 +1,10 @@
+mstdev:
+  image: docker.io/avirshup/mst:workflows-0.0.1b6
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - $HOME:$HOME
+    - .:/opt/chemworkflows
+  entrypoint: bash
+  working_dir: $HOME
+  stdin_open: true
+  tty: true
