@@ -9,10 +9,11 @@ import yaml
 import pyccc
 from pyccc.workflow.runner import SerialCCCRunner, SerialRuntimeRunner
 
-from .apps import vde, MMminimize
+from .apps import vde, MMminimize, simsetup
 
 APPNAMES = {'minimize': MMminimize.minimization,
-            'vde': vde.vde}
+            'vde': vde.vde,
+            'setuplammps': simsetup.simsetup}
 
 
 def main(args):
@@ -218,6 +219,7 @@ def process_input_file(inputfile):
     except ValueError:
         pass
     else:
+        print jsraw
         inputjson = json.loads(jsraw)
         return inputjson
 

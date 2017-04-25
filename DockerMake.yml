@@ -1,5 +1,5 @@
 _SOURCES_:
- - ~/mycode/public_clean/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
+ - ~/mycode/molecular-design-toolkit/DockerMakefiles/DockerMake.yml
 
 _ALL_:
   - mdt_subprocess
@@ -18,17 +18,25 @@ mdt_subprocess:
 
 
 workflows:
-  requires:
-    - mdt_subprocess
+  FROM: docker.io/avirshup/mst:workflows-0.0.1b6
   build_directory: .
   build: |
     RUN mkdir -p /opt/chemworkflows/ /inputs /outputs
     WORKDIR /outputs
     ADD ./ /opt/chemworkflows/
     RUN cd /opt/chemworkflows \
-       && pip install -r requirements.txt \
-       && pip install -e .
+       && pip install -e . --no-deps
     ENTRYPOINT ["chemworkflow"]
+
+
+mdt_lammps:
+  description: does not actually include lammps, we just need the compatible branch
+  requires:
+    - moldesign_minimal
+  build: |
+    RUN git clone https://github.com/Autodesk/molecular-design-toolkit \
+                 --branch interactive_simulation --single-branch \
+     && pip install -e molecular-design-toolkit
 
 
 mdt_nwchem:
@@ -53,3 +61,5 @@ runner:
      COPY . /opt/mdtscripts
      RUN chmod +x /opt/mdtscripts/run.sh
      ENTRYPOINT /opt/mdtscripts run.sh
+
+
